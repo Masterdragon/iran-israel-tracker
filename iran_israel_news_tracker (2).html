@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iran–Israel · Live Conflict Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3ef;
+  --surface:#ffffff;
+  --surface2:#f0ede8;
+  --border:#e0dbd2;
+  --border2:#c8c2b8;
+  --text:#1a1814;
+  --muted:#6b6560;
+  --dim:#a09890;
+  --accent:#c0392b;
+  --accent2:#e67e22;
+  --blue:#1a6fa8;
+  --green:#1e7a45;
+  --mil:#c0392b;
+  --dip:#1a6fa8;
+  --nuc:#7b3fa0;
+  --eco:#1e7a45;
+  --prx:#c07a00;
+  --us:#1a6fa8;
+  --gen:#6b6560;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── page layout ── */
+.wrap{max-width:800px;margin:0 auto;padding:0 20px 80px}
+
+/* ── masthead ── */
+.masthead{border-bottom:3px solid var(--text);padding:24px 0 14px;margin-bottom:0}
+.masthead-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.masthead-left{}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.live-badge{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;letter-spacing:2px}
+.live-badge .dot{width:5px;height:5px;border-radius:50%;background:#fff}
+.live-badge .dot.live{animation:blink 1.4s infinite}
+.live-badge .dot.paused{animation:none;opacity:.5}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+h1{font-family:'Playfair Display',serif;font-size:clamp(26px,5vw,46px);font-weight:800;line-height:1.05;letter-spacing:-.5px;color:var(--text)}
+h1 em{color:var(--accent);font-style:normal}
+.dateline{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px;letter-spacing:.5px}
+
+.masthead-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding-top:4px;flex-shrink:0}
+.stat-box{text-align:right}
+.stat-v{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;line-height:1;color:var(--text)}
+.stat-l{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px}
+#cd{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim)}
+
+/* ── rule ── */
+.rule{height:1px;background:var(--border);margin:12px 0}
+.rule.thick{height:3px;background:var(--text);margin:0 0 18px}
+
+/* ── toolbar ── */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--border)}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;padding:6px 14px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:.8px;text-transform:uppercase;transition:all .15s}
+.btn:hover{background:var(--surface2);border-color:var(--text);color:var(--text)}
+.btn.stop{border-color:var(--accent);color:var(--accent)}
+.btn.stop:hover{background:rgba(192,57,43,.07)}
+.btn.go{border-color:var(--green);color:var(--green)}
+.btn.go:hover{background:rgba(30,122,69,.07)}
+
+/* ── filter bar ── */
+.fbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.ftag{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 11px;border-radius:2px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.8px;text-transform:uppercase}
+.ftag:hover{border-color:var(--border2);color:var(--text)}
+.ftag.on{background:var(--text);color:#fff;border-color:var(--text)}
+.ftag.on[data-c="Military"]{background:var(--mil);border-color:var(--mil)}
+.ftag.on[data-c="Diplomacy"]{background:var(--dip);border-color:var(--dip)}
+.ftag.on[data-c="Nuclear"]{background:var(--nuc);border-color:var(--nuc)}
+.ftag.on[data-c="Economy"]{background:var(--eco);border-color:var(--eco)}
+.ftag.on[data-c="Proxies"]{background:var(--prx);border-color:var(--prx)}
+.ftag.on[data-c="US/Intl"]{background:var(--us);border-color:var(--us)}
+
+/* ── loader bar ── */
+#lbar{height:2px;background:var(--border);border-radius:0;margin-bottom:16px;overflow:hidden;opacity:0;transition:opacity .2s}
+#lbar.on{opacity:1}
+#lfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s ease}
+
+/* ── log ── */
+#log{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:18px;min-height:13px}
+
+/* ── TIMELINE ── */
+#timeline{position:relative;padding-left:0}
+
+.day-group{margin-bottom:32px}
+.day-label{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.day-label-txt{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+.day-label-line{flex:1;height:1px;background:var(--border)}
+
+/* timeline row */
+.titem{display:flex;gap:0;margin-bottom:16px;animation:fadeUp .35s ease forwards;opacity:0}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* left time column */
+.ttime-col{width:72px;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;padding-top:16px;padding-right:14px;position:relative}
+.ttime-col::after{content:'';position:absolute;right:-1px;top:22px;width:7px;height:7px;border-radius:50%;background:var(--border2);border:2px solid var(--bg);z-index:1}
+.titem.fresh .ttime-col::after{background:var(--accent);box-shadow:0 0 0 3px rgba(192,57,43,.15)}
+.ttime-main{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--text);line-height:1}
+.ttime-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-top:3px}
+
+/* vertical line */
+.tline{width:1px;background:var(--border);flex-shrink:0;margin:0}
+
+/* card */
+.tcard-col{flex:1;padding-left:18px;padding-bottom:4px}
+.tcard{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.tcard:hover{border-color:var(--border2);box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.titem.fresh .tcard{border-color:var(--accent);border-left:3px solid var(--accent)}
+
+/* card image */
+.tcard-img{width:100%;height:160px;object-fit:cover;display:block;background:var(--surface2)}
+.tcard-img-placeholder{width:100%;height:120px;display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--surface2);border-bottom:1px solid var(--border)}
+
+.tcard-body{padding:12px 14px 14px}
+.tmeta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.ttag{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:2px;letter-spacing:1px;text-transform:uppercase;font-weight:500;flex-shrink:0}
+.t-Military{background:rgba(192,57,43,.1);color:var(--mil);border:1px solid rgba(192,57,43,.2)}
+.t-Diplomacy{background:rgba(26,111,168,.1);color:var(--dip);border:1px solid rgba(26,111,168,.2)}
+.t-Nuclear{background:rgba(123,63,160,.1);color:var(--nuc);border:1px solid rgba(123,63,160,.2)}
+.t-Economy{background:rgba(30,122,69,.1);color:var(--eco);border:1px solid rgba(30,122,69,.2)}
+.t-Proxies{background:rgba(192,122,0,.1);color:var(--prx);border:1px solid rgba(192,122,0,.2)}
+.t-USIntl{background:rgba(26,111,168,.1);color:var(--us);border:1px solid rgba(26,111,168,.2)}
+.t-General{background:rgba(107,101,96,.1);color:var(--gen);border:1px solid rgba(107,101,96,.2)}
+
+.tsrc{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-left:auto}
+.ttitle{font-family:'Inter',sans-serif;font-size:14px;font-weight:600;line-height:1.5;color:var(--text);margin-bottom:7px}
+.tdesc{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:10px}
+.tlink{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:.3px}
+.tlink:hover{text-decoration:underline}
+
+.empty{padding:40px 20px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);border:1px dashed var(--border);border-radius:4px;background:var(--surface)}
+.hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);padding:20px 0 0;letter-spacing:.3px}
+.hint kbd{background:var(--surface);border:1px solid var(--border2);border-radius:2px;padding:1px 5px;font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+@media(max-width:500px){.masthead-right{display:none}h1{font-size:24px}.ttime-col{width:56px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- masthead -->
+<div class="masthead">
+  <div class="masthead-top">
+    <div class="masthead-left">
+      <div class="eyebrow">
+        🇮🇷 &nbsp;·&nbsp; 🇮🇱 &nbsp;&nbsp;
+        <span class="live-badge"><span class="dot live" id="dot"></span><span id="slbl">LIVE</span></span>
+      </div>
+      <h1>Iran–<em>Israel</em><br>Conflict Tracker</h1>
+      <div class="dateline" id="dateline">—</div>
+    </div>
+    <div class="masthead-right">
+      <div class="stat-box">
+        <div class="stat-v" id="ci">0</div>
+        <div class="stat-l">Updates</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-v" id="cf">0</div>
+        <div class="stat-l">Fetches</div>
+      </div>
+      <div id="cd" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);text-align:right">—</div>
+    </div>
+  </div>
+</div>
+<div class="rule thick"></div>
+
+<!-- toolbar -->
+<div class="toolbar">
+  <button class="btn stop" id="tbtn" onclick="toggleStream()">⏸ Pause</button>
+  <button class="btn" onclick="fetchNow()">↺ Refresh now</button>
+  <button class="btn" onclick="clearFeed()">✕ Clear</button>
+</div>
+
+<!-- filter -->
+<div class="fbar">
+  <button class="ftag on" data-c="All" onclick="sf('All')">All</button>
+  <button class="ftag" data-c="Military" onclick="sf('Military')">Military</button>
+  <button class="ftag" data-c="Diplomacy" onclick="sf('Diplomacy')">Diplomacy</button>
+  <button class="ftag" data-c="Nuclear" onclick="sf('Nuclear')">Nuclear</button>
+  <button class="ftag" data-c="Proxies" onclick="sf('Proxies')">Proxies</button>
+  <button class="ftag" data-c="Economy" onclick="sf('Economy')">Economy</button>
+  <button class="ftag" data-c="US/Intl" onclick="sf('US/Intl')">US / Intl</button>
+</div>
+
+<div id="lbar"><div id="lfill"></div></div>
+<div id="log">Initialising…</div>
+<div id="timeline"><div class="empty">Fetching latest updates…</div></div>
+<p class="hint">Keyboard: <kbd>Space</kbd> pause &nbsp;·&nbsp; <kbd>R</kbd> refresh &nbsp;·&nbsp; <kbd>C</kbd> clear</p>
+
+</div>
+<script>
+// ── feeds ────────────────────────────────────────────────────────────────────
+const R2J='https://api.rss2json.com/v1/api.json?rss_url=';
+const FEEDS=[
+  R2J+encodeURIComponent('https://news.google.com/rss/search?q=Iran+Israel&hl=en-US&gl=US&ceid=US:en'),
+  R2J+encodeURIComponent('https://news.google.com/rss/search?q=Iran+Israel+strike+attack+military&hl=en-US&gl=US&ceid=US:en'),
+  R2J+encodeURIComponent('https://news.google.com/rss/search?q=Iran+Israel+nuclear+missile+Hezbollah&hl=en-US&gl=US&ceid=US:en'),
+  R2J+encodeURIComponent('https://news.google.com/rss/search?q=Kharg+island+OR+Netanyahu+Iran+OR+IDF+Iran+OR+Israel+Iran+ceasefire&hl=en-US&gl=US&ceid=US:en'),
+  R2J+encodeURIComponent('https://www.aljazeera.com/xml/rss/all.xml'),
+  R2J+encodeURIComponent('https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms'),
+];
+const INTERVAL=60;
+
+// ── state ────────────────────────────────────────────────────────────────────
+let running=true,items=[],seen=new Set(),filter='All',fetchCt=0,cdVal=0,cdT=null,fT=null;
+
+// ── category emoji icons (fallback when no image) ────────────────────────────
+const CAT_ICON={'Military':'⚔️','Diplomacy':'🤝','Nuclear':'☢️','Economy':'📉','Proxies':'🎯','US/Intl':'🌐','General':'📰'};
+
+function dkey(t){return t.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim().slice(0,55)}
+
+function categorise(t,d){
+  const s=(t+' '+(d||'')).toLowerCase();
+  if(/strike|attack|bomb|missil|drone|rocket|explosion|idf|irgc|air.?forc|kill|casualt|dead|wound|intercept|kharg|haifa|tel.?aviv|tehran|balist/.test(s))return'Military';
+  if(/nuclear|uranium|enrich|centrifug|natanz|fordow|iaea|atomic|radioact|warhead/.test(s))return'Nuclear';
+  if(/ceasefire|negoti|talk|diplomat|deal|agreement|peace|truce|un |united.?nation|envoy|mediat|secretary|minister|summit|sanction/.test(s))return'Diplomacy';
+  if(/oil|econom|financ|dollar|rial|export|import|tariff|trade|market|price|embargo/.test(s))return'Economy';
+  if(/hezbollah|hamas|houthi|proxy|militia|gaza|lebanon|syria|iraq|yemen|west.?bank|palestin/.test(s))return'Proxies';
+  if(/\bus\b|usa|united.?states|pentagon|biden|trump|white.?house|state.?dept|nato|\buk\b|europe|russia|china|britain|france|g7/.test(s))return'US/Intl';
+  return'General';
+}
+function relevant(t,d){
+  return /iran|israel|idf|irgc|netanyahu|khamenei|pezeshkian|gallant|gantz|tehran|tel.?aviv|jerusalem|kharg|mossad|hezbollah|persian.?gulf/.test((t+' '+(d||'')).toLowerCase());
+}
+function strip(s){return(s||'').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ').trim()}
+function domain(u){try{return new URL(u||'').hostname.replace('www.','')}catch{return''}}
+
+// ── extract best image from rss2json item ─────────────────────────────────────
+function getImage(item){
+  // rss2json provides thumbnail or enclosure
+  if(item.thumbnail && item.thumbnail.startsWith('http')) return item.thumbnail;
+  if(item.enclosure && item.enclosure.link && item.enclosure.link.startsWith('http')) return item.enclosure.link;
+  // try to find <img> in description/content
+  const m=(item.description||item.content||'').match(/<img[^>]+src=["']([^"']+)["']/i);
+  if(m&&m[1]&&m[1].startsWith('http')) return m[1];
+  return null;
+}
+
+async function fetchFeed(url){
+  const r=await fetch(url,{cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j.status!=='ok')throw new Error(j.message||'bad status');
+  return j.items||[];
+}
+
+async function fetchNow(){
+  if(!running)return;
+  ldStart();
+  const fetchedAt=new Date(); // ← system clock at time of fetch
+  fetchCt++;
+  document.getElementById('cf').textContent=fetchCt;
+  setLog('Fetching '+FEEDS.length+' feeds…');
+  let fresh=[],errors=0;
+
+  for(const url of FEEDS){
+    try{
+      const raw=await fetchFeed(url);
+      for(const item of raw){
+        const title=strip(item.title||'');
+        if(!title)continue;
+        const desc=strip(item.description||item.content||'');
+        if(!relevant(title,desc))continue;
+        const k=dkey(title);
+        if(seen.has(k))continue;
+        seen.add(k);
+        const src=item.author||(item.source&&item.source.name?item.source.name:'')||domain(item.link)||'Source';
+        const image=getImage(item);
+        // Use fetchedAt as display time so it always shows current system time
+        fresh.push({id:k,title,desc:desc.slice(0,240),link:item.link||item.guid||'#',source:src,cat:categorise(title,desc),fetchedAt,ts:fetchedAt.getTime(),image,fresh:true});
+      }
+    }catch(e){errors++}
+  }
+  ldEnd();
+  if(fresh.length>0){
+    items=[...fresh,...items].slice(0,300);
+    setTimeout(()=>{fresh.forEach(i=>i.fresh=false)},6000);
+    document.getElementById('ci').textContent=items.length;
+    setLog('+'+fresh.length+' new item'+(fresh.length>1?'s':'')+' · '+errors+' error(s)');
+    render();
+  }else{
+    const msg=errors===FEEDS.length?'All feeds failed — check connection.':'No new relevant updates found.';
+    setLog(msg+' Retrying in 60s.');
+    if(items.length===0)document.getElementById('timeline').innerHTML='<div class="empty">'+msg+'<br><br>Will retry automatically.</div>';
+  }
+  startCD(INTERVAL);
+  clearTimeout(fT);
+  fT=setTimeout(fetchNow,INTERVAL*1000);
+}
+
+function render(){
+  const list=filter==='All'?items:items.filter(i=>i.cat===filter);
+  const tl=document.getElementById('timeline');
+  if(!list.length){tl.innerHTML='<div class="empty">No items in this category yet.</div>';return;}
+
+  // group by day (using fetchedAt)
+  const groups={};
+  for(const it of list){
+    const dk=it.fetchedAt.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    if(!groups[dk])groups[dk]=[];
+    groups[dk].push(it);
+  }
+
+  let html='';
+  for(const[day,ditems]of Object.entries(groups)){
+    html+='<div class="day-group"><div class="day-label"><span class="day-label-txt">'+day+'</span><span class="day-label-line"></span></div>';
+    // build timeline rows — line connects items
+    for(let i=0;i<ditems.length;i++){
+      const it=ditems[i];
+      const tstr=it.fetchedAt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+      const tc='t-'+it.cat.replace('/','');
+      const icon=CAT_ICON[it.cat]||'📰';
+      const imgHtml=it.image
+        ?'<img class="tcard-img" src="'+it.image+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+        :'<div class="tcard-img-placeholder">'+icon+'</div>';
+      const dd=it.desc?'<div class="tdesc">'+it.desc+(it.desc.length>=240?'…':'')+'</div>':'';
+      const isLast=i===ditems.length-1;
+      html+=`
+        <div class="titem${it.fresh?' fresh':''}">
+          <div class="ttime-col">
+            <span class="ttime-main">${tstr}</span>
+            <span class="ttime-sub">fetched</span>
+          </div>
+          <div class="tline" style="background:${isLast?'transparent':'var(--border)'}"></div>
+          <div class="tcard-col">
+            <div class="tcard">
+              ${imgHtml}
+              <div class="tcard-body">
+                <div class="tmeta">
+                  <span class="ttag ${tc}">${it.cat}</span>
+                  <span class="tsrc">${it.source}</span>
+                </div>
+                <div class="ttitle">${it.title}</div>
+                ${dd}
+                <a class="tlink" href="${it.link}" target="_blank" rel="noopener">Read full article ↗</a>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+    html+='</div>';
+  }
+  tl.innerHTML=html;
+}
+
+function sf(f){
+  filter=f;
+  document.querySelectorAll('.ftag').forEach(b=>b.classList.toggle('on',b.dataset.c===f));
+  render();
+}
+function setLog(m){document.getElementById('log').textContent='// '+m}
+function ldStart(){const b=document.getElementById('lbar'),f=document.getElementById('lfill');b.classList.add('on');f.style.width='0%';setTimeout(()=>f.style.width='70%',30)}
+function ldEnd(){const f=document.getElementById('lfill');f.style.width='100%';setTimeout(()=>{document.getElementById('lbar').classList.remove('on');f.style.width='0%'},500)}
+
+function startCD(s){
+  clearInterval(cdT);cdVal=s;
+  cdT=setInterval(()=>{
+    if(!running){clearInterval(cdT);document.getElementById('cd').textContent='paused';return}
+    cdVal--;
+    if(cdVal<=0){clearInterval(cdT);document.getElementById('cd').textContent='fetching…';return}
+    const m=Math.floor(cdVal/60),sec=String(cdVal%60).padStart(2,'0');
+    document.getElementById('cd').textContent='next in '+m+':'+sec;
+  },1000);
+}
+
+function toggleStream(){
+  running=!running;
+  const btn=document.getElementById('tbtn'),dot=document.getElementById('dot'),lbl=document.getElementById('slbl');
+  if(!running){
+    clearTimeout(fT);clearInterval(cdT);
+    btn.textContent='▶ Resume';btn.className='btn go';
+    dot.classList.add('paused');dot.classList.remove('live');lbl.textContent='PAUSED';
+    document.getElementById('cd').textContent='paused';
+  }else{
+    btn.textContent='⏸ Pause';btn.className='btn stop';
+    dot.classList.remove('paused');dot.classList.add('live');lbl.textContent='LIVE';
+    fetchNow();
+  }
+}
+function clearFeed(){
+  items=[];seen.clear();
+  document.getElementById('ci').textContent='0';
+  document.getElementById('timeline').innerHTML='<div class="empty">Feed cleared. Fetching fresh…</div>';
+  fetchNow();
+}
+
+// ── update dateline every second ──────────────────────────────────────────────
+function updateDateline(){
+  const now=new Date();
+  document.getElementById('dateline').textContent=
+    now.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+    +' · '+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true})+' IST';
+}
+setInterval(updateDateline,1000);
+updateDateline();
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();toggleStream()}
+  if(e.key==='r'||e.key==='R')fetchNow();
+  if(e.key==='c'||e.key==='C')clearFeed();
+});
+
+fetchNow();
+</script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iran–Israel · Live Conflict Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08080a;--surface:#111114;--surface2:#18181c;
+  --border:#222228;--border2:#32323c;
+  --text:#e6e6ea;--muted:#74748a;--dim:#3e3e4a;
+  --accent:#ff4a1c;--accent2:#ffb347;
+  --green:#22c55e;--red:#ff4a4a;--blue:#3a8fff;
+  --mil:#ff4a1c;--dip:#3a8fff;--nuc:#a855f7;
+  --eco:#22c55e;--prx:#ffb347;--us:#06b6d4;--gen:#74748a;
+}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px 80px;position:relative;z-index:1}
+
+header{padding:32px 0 22px;border-bottom:1px solid var(--border);margin-bottom:22px}
+.hrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.flags{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.flags span{font-size:22px}
+.vs-txt{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:3px}
+h1{font-size:clamp(22px,5vw,36px);font-weight:800;letter-spacing:-1px;line-height:1.1}
+h1 em{color:var(--accent);font-style:normal}
+.sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:.5px}
+.pill{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;margin-top:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dot.live{animation:blink 1.8s ease-in-out infinite}
+.dot.paused{background:var(--red);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;padding:7px 16px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;letter-spacing:.8px;text-transform:uppercase;transition:all .15s}
+.btn:hover{background:var(--surface2);border-color:var(--text)}
+.btn.stop{border-color:var(--red);color:var(--red)}
+.btn.stop:hover{background:rgba(255,74,74,.1)}
+.btn.go{border-color:var(--green);color:var(--green)}
+.btn.go:hover{background:rgba(34,197,94,.1)}
+.stats{margin-left:auto;display:flex;gap:18px;align-items:center}
+.stat-v{font-size:18px;font-weight:700;line-height:1}
+.stat-l{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+.fbar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:20px}
+.ftag{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 11px;border-radius:2px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.ftag:hover,.ftag.on{background:var(--surface2);border-color:var(--border2);color:var(--text)}
+.ftag.on[data-c="Military"]{border-color:var(--mil);color:var(--mil)}
+.ftag.on[data-c="Diplomacy"]{border-color:var(--dip);color:var(--dip)}
+.ftag.on[data-c="Nuclear"]{border-color:var(--nuc);color:var(--nuc)}
+.ftag.on[data-c="Economy"]{border-color:var(--eco);color:var(--eco)}
+.ftag.on[data-c="Proxies"]{border-color:var(--prx);color:var(--prx)}
+.ftag.on[data-c="US/Intl"]{border-color:var(--us);color:var(--us)}
+
+#lbar{height:2px;background:var(--border);border-radius:2px;margin-bottom:16px;overflow:hidden;opacity:0;transition:opacity .2s}
+#lbar.on{opacity:1}
+#lfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .5s ease}
+
+#log{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;min-height:14px}
+
+/* Timeline */
+#timeline{position:relative;padding-left:28px}
+#timeline::before{content:'';position:absolute;left:6px;top:8px;bottom:0;width:1px;background:var(--border)}
+.day-group{margin-bottom:30px}
+.day-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-left:2px}
+.titem{position:relative;margin-bottom:12px;animation:slideIn .35s ease forwards;opacity:0}
+.titem::before{content:'';position:absolute;left:-25px;top:14px;width:7px;height:7px;border-radius:50%;background:var(--dim);border:1px solid var(--border2)}
+.titem.fresh::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 7px rgba(255,74,28,.6)}
+@keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.tcard{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:13px 16px;transition:border-color .15s,background .15s}
+.tcard:hover{background:var(--surface2);border-color:var(--border2)}
+.tmeta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.ttag{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 7px;border-radius:2px;letter-spacing:1px;text-transform:uppercase;font-weight:500;flex-shrink:0}
+.t-Military{background:rgba(255,74,28,.12);color:var(--mil);border:1px solid rgba(255,74,28,.25)}
+.t-Diplomacy{background:rgba(58,143,255,.12);color:var(--dip);border:1px solid rgba(58,143,255,.25)}
+.t-Nuclear{background:rgba(168,85,247,.12);color:var(--nuc);border:1px solid rgba(168,85,247,.25)}
+.t-Economy{background:rgba(34,197,94,.12);color:var(--eco);border:1px solid rgba(34,197,94,.25)}
+.t-Proxies{background:rgba(255,179,71,.12);color:var(--prx);border:1px solid rgba(255,179,71,.25)}
+.t-USIntl{background:rgba(6,182,212,.12);color:var(--us);border:1px solid rgba(6,182,212,.25)}
+.t-General{background:rgba(116,116,138,.12);color:var(--gen);border:1px solid rgba(116,116,138,.25)}
+.ttime{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim)}
+.tsrc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);margin-left:auto;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttitle{font-size:13px;font-weight:600;line-height:1.55;color:var(--text);margin-bottom:7px}
+.tdesc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+.tlink{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none}
+.tlink:hover{text-decoration:underline}
+.empty{padding:40px 20px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--dim);border:1px dashed var(--border);border-radius:4px}
+.hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);padding:16px 0 0}
+.hint kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:2px;padding:1px 5px;font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+@media(max-width:480px){.stats{display:none}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="hrow">
+    <div>
+      <div class="flags"><span>🇮🇷</span><span class="vs-txt">VS</span><span>🇮🇱</span></div>
+      <h1>Iran–<em>Israel</em><br>Conflict Tracker</h1>
+      <p class="sub">// rss-powered · free · no api key · refreshes every 60s</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:6px">
+      <div class="pill"><div class="dot live" id="dot"></div><span id="slbl">LIVE</span></div>
+      <span id="cd" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim)">—</span>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="btn stop" id="tbtn" onclick="toggleStream()">⏸ Pause</button>
+  <button class="btn" onclick="fetchNow()">↺ Refresh now</button>
+  <button class="btn" onclick="clearFeed()">✕ Clear</button>
+  <div class="stats">
+    <div><div class="stat-v" id="ci">0</div><div class="stat-l">Updates</div></div>
+    <div><div class="stat-v" id="cf">0</div><div class="stat-l">Fetches</div></div>
+  </div>
+</div>
+
+<div class="fbar">
+  <button class="ftag on" data-c="All" onclick="sf('All')">All</button>
+  <button class="ftag" data-c="Military" onclick="sf('Military')">Military</button>
+  <button class="ftag" data-c="Diplomacy" onclick="sf('Diplomacy')">Diplomacy</button>
+  <button class="ftag" data-c="Nuclear" onclick="sf('Nuclear')">Nuclear</button>
+  <button class="ftag" data-c="Proxies" onclick="sf('Proxies')">Proxies</button>
+  <button class="ftag" data-c="Economy" onclick="sf('Economy')">Economy</button>
+  <button class="ftag" data-c="US/Intl" onclick="sf('US/Intl')">US / Intl</button>
+</div>
+
+<div id="lbar"><div id="lfill"></div></div>
+<div id="log">Initialising…</div>
+<div id="timeline"><div class="empty">Fetching latest updates…</div></div>
+<p class="hint">Keyboard: <kbd>Space</kbd> pause/resume &nbsp;·&nbsp; <kbd>R</kbd> refresh now &nbsp;·&nbsp; <kbd>C</kbd> clear feed</p>
+
+</div>
+<script>
+const FEEDS=[
+  'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://news.google.com/rss/search?q=Iran+Israel&hl=en-US&gl=US&ceid=US:en'),
+  'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://news.google.com/rss/search?q=Iran+Israel+strike+attack+military&hl=en-US&gl=US&ceid=US:en'),
+  'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://news.google.com/rss/search?q=Iran+Israel+nuclear+missile+Hezbollah&hl=en-US&gl=US&ceid=US:en'),
+  'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://news.google.com/rss/search?q=Kharg+island+OR+Netanyahu+Iran+OR+IDF+Iran+OR+Israel+Iran+ceasefire&hl=en-US&gl=US&ceid=US:en'),
+  'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://www.aljazeera.com/xml/rss/all.xml'),
+  'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms'),
+];
+const INTERVAL=60;
+let running=true,items=[],seen=new Set(),filter='All',fetchCt=0,cdVal=0,cdT=null,fT=null;
+
+function dkey(t){return t.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim().slice(0,55)}
+function categorise(t,d){
+  const s=(t+' '+(d||'')).toLowerCase();
+  if(/strike|attack|bomb|missil|drone|rocket|explosion|idf|irgc|air.?forc|kill|casualt|dead|wound|intercept|kharg|haifa|tel.?aviv|tehran|balist/.test(s))return'Military';
+  if(/nuclear|uranium|enrich|centrifug|natanz|fordow|iaea|atomic|radioact|warhead/.test(s))return'Nuclear';
+  if(/ceasefire|negoti|talk|diplomat|deal|agreement|peace|truce|un |united.?nation|envoy|mediat|secretary|minister|summit|sanction/.test(s))return'Diplomacy';
+  if(/oil|econom|financ|dollar|rial|export|import|tariff|trade|market|price|embargo/.test(s))return'Economy';
+  if(/hezbollah|hamas|houthi|proxy|militia|gaza|lebanon|syria|iraq|yemen|west.?bank|palestin/.test(s))return'Proxies';
+  if(/\bus\b|usa|united.?states|pentagon|biden|trump|white.?house|state.?dept|nato|\buk\b|europe|russia|china|britain|france|g7/.test(s))return'US/Intl';
+  return'General';
+}
+function relevant(t,d){
+  return /iran|israel|idf|irgc|netanyahu|khamenei|pezeshkian|gallant|gantz|tehran|tel.?aviv|jerusalem|kharg|mossad|hezbollah|persian.?gulf/.test((t+' '+(d||'')).toLowerCase());
+}
+function strip(s){return(s||'').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ').trim()}
+function domain(u){try{return new URL(u||'').hostname.replace('www.','')}catch{return''}}
+
+async function fetchFeed(url){
+  const r=await fetch(url,{cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j.status!=='ok')throw new Error(j.message||'bad status');
+  return j.items||[];
+}
+
+async function fetchNow(){
+  if(!running)return;
+  ldStart();
+  fetchCt++;
+  document.getElementById('cf').textContent=fetchCt;
+  setLog('Fetching '+FEEDS.length+' feeds…');
+  let fresh=[],errors=0;
+  for(const url of FEEDS){
+    try{
+      const raw=await fetchFeed(url);
+      for(const item of raw){
+        const title=strip(item.title||'');
+        if(!title)continue;
+        const desc=strip(item.description||item.content||'');
+        if(!relevant(title,desc))continue;
+        const k=dkey(title);
+        if(seen.has(k))continue;
+        seen.add(k);
+        const pd=item.pubDate?new Date(item.pubDate):new Date();
+        const src=item.author||(item.source&&item.source.name?item.source.name:'')||domain(item.link)||'Unknown';
+        fresh.push({id:k,title,desc:desc.slice(0,220),link:item.link||item.guid||'#',source:src,cat:categorise(title,desc),ts:pd.getTime(),pubDate:pd,fresh:true});
+      }
+    }catch(e){errors++}
+  }
+  ldEnd();
+  if(fresh.length>0){
+    fresh.sort((a,b)=>b.ts-a.ts);
+    items=[...fresh,...items].slice(0,300);
+    setTimeout(()=>{fresh.forEach(i=>i.fresh=false)},5000);
+    document.getElementById('ci').textContent=items.length;
+    setLog('+'+fresh.length+' new · '+errors+' feed error(s)');
+    render();
+  }else{
+    const msg=errors===FEEDS.length?'All feeds failed — check internet connection. Will retry.':'No new updates found. Retrying in 60s.';
+    setLog(msg);
+    if(items.length===0)document.getElementById('timeline').innerHTML='<div class="empty">'+msg+'</div>';
+  }
+  startCD(INTERVAL);
+  clearTimeout(fT);
+  fT=setTimeout(fetchNow,INTERVAL*1000);
+}
+
+function render(){
+  const list=filter==='All'?items:items.filter(i=>i.cat===filter);
+  const tl=document.getElementById('timeline');
+  if(!list.length){tl.innerHTML='<div class="empty">No items in this category yet.</div>';return;}
+  const groups={};
+  for(const it of list){
+    const dk=it.pubDate.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    if(!groups[dk])groups[dk]=[];
+    groups[dk].push(it);
+  }
+  let html='';
+  for(const[day,ditems]of Object.entries(groups)){
+    html+='<div class="day-group"><div class="day-label">'+day+'</div>';
+    for(const it of ditems){
+      const tstr=it.pubDate.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+      const tc='t-'+it.cat.replace('/','');
+      const dd=it.desc?'<div class="tdesc">'+it.desc+(it.desc.length>=220?'…':'')+'</div>':'';
+      html+='<div class="titem'+(it.fresh?' fresh':'')+'"><div class="tcard"><div class="tmeta"><span class="ttag '+tc+'">'+it.cat+'</span><span class="ttime">'+tstr+'</span><span class="tsrc">'+it.source+'</span></div><div class="ttitle">'+it.title+'</div>'+dd+'<a class="tlink" href="'+it.link+'" target="_blank" rel="noopener">Read full article ↗</a></div></div>';
+    }
+    html+='</div>';
+  }
+  tl.innerHTML=html;
+}
+
+function sf(f){
+  filter=f;
+  document.querySelectorAll('.ftag').forEach(b=>b.classList.toggle('on',b.dataset.c===f));
+  render();
+}
+
+function setLog(m){document.getElementById('log').textContent='// '+m}
+
+function ldStart(){const b=document.getElementById('lbar'),f=document.getElementById('lfill');b.classList.add('on');f.style.width='0%';setTimeout(()=>f.style.width='70%',30)}
+function ldEnd(){const f=document.getElementById('lfill');f.style.width='100%';setTimeout(()=>{document.getElementById('lbar').classList.remove('on');f.style.width='0%'},500)}
+
+function startCD(s){
+  clearInterval(cdT);cdVal=s;
+  cdT=setInterval(()=>{
+    if(!running){clearInterval(cdT);document.getElementById('cd').textContent='paused';return}
+    cdVal--;
+    if(cdVal<=0){clearInterval(cdT);document.getElementById('cd').textContent='fetching…';return}
+    const m=Math.floor(cdVal/60),sec=String(cdVal%60).padStart(2,'0');
+    document.getElementById('cd').textContent='next in '+m+':'+sec;
+  },1000);
+}
+
+function toggleStream(){
+  running=!running;
+  const btn=document.getElementById('tbtn'),dot=document.getElementById('dot'),lbl=document.getElementById('slbl');
+  if(!running){
+    clearTimeout(fT);clearInterval(cdT);
+    btn.textContent='▶ Resume';btn.className='btn go';
+    dot.classList.add('paused');lbl.textContent='PAUSED';
+    document.getElementById('cd').textContent='paused';
+  }else{
+    btn.textContent='⏸ Pause';btn.className='btn stop';
+    dot.classList.remove('paused');lbl.textContent='LIVE';
+    fetchNow();
+  }
+}
+
+function clearFeed(){
+  items=[];seen.clear();
+  document.getElementById('ci').textContent='0';
+  document.getElementById('timeline').innerHTML='<div class="empty">Feed cleared. Fetching fresh…</div>';
+  fetchNow();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();toggleStream()}
+  if(e.key==='r'||e.key==='R')fetchNow();
+  if(e.key==='c'||e.key==='C')clearFeed();
+});
+
+fetchNow();
+</script>
+</body>
+</html>
